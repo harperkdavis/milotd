@@ -295,7 +295,7 @@ const towers = [
     {
         name: 'Combiner',
         type: 'automation',
-        help: 'resources color mixer\n\nred+blue=magenta\nblue+yellow=cyan\nyellow+red=green\nred+yellow+green=black\nblack+black=white',
+        help: 'an essential technological discovery. a resources color mixer.\n\nred+blue=magenta\nblue+yellow=cyan\nyellow+red=green\nred+yellow+green=black\nblack+black=white',
         cost: 8000,
         resourceCost: [0, 10.4, 10, 0, 0, 0, 0, 0],
         costScale: 1.4,
