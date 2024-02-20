@@ -1,3 +1,9 @@
+// fix
+// power generator
+// combiner resource cost
+// enemy scaling is too slow
+// nerf magic
+
 const input = { keys: {}, mouse: {} }
 const game = {
     over: false,
@@ -53,6 +59,8 @@ const game = {
     selling: false,
 };
 
+const defaultGame = JSON.parse(JSON.stringify(game));
+
 const enemies = [
     { // 0
         image: '0.png',
@@ -63,91 +71,91 @@ const enemies = [
     },
     { // 1
         image: 'adam-0.png',
-        health: 20,
+        health: 40,
         speed: 0.75,
         value: 20,
         spawns: [],
     },
     { // 2
         image: '1.png',
-        health: 50,
+        health: 100,
         speed: 0.5,
         value: 100,
         spawns: [0, 0],
     },
     { // 3
         image: 'nathan-0.png',
-        health: 200,
+        health: 500,
         speed: 0.25,
         value: 500,
         spawns: [0, 0, 0, 0],
     },
     { // 4
         image: '2.png',
-        health: 250,
+        health: 1000,
         speed: 0.5,
         value: 200,
         spawns: [2, 2, 2, 2],
     },
     { // 5
         image: 'adam-1.png',
-        health: 200,
+        health: 400,
         speed: 1,
         value: 400,
         spawns: [1, 1],
     },
     { // 6
         image: 'nathan-1.png', // Boss 1
-        health: 2000,
+        health: 10_000,
         speed: 0.1,
         value: 10000,
         spawns: [0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3],
     },
     { // 7
         image: '3.png',
-        health: 500,
+        health: 10_000,
         speed: 0.5,
         value: 1000,
         spawns: [4, 4, 4, 4],
     },
     { // 8
         image: 'adam-2.png',
-        health: 500,
+        health: 8_000,
         speed: 1,
         value: 2000,
         spawns: [2, 2, 2, 2],
     },
     { // 9
         image: 'nathan-2.png', // Boss 2
-        health: 20000,
+        health: 400000,
         speed: 0.1,
         value: 20000,
         spawns: [4, 4, 4, 4, 4, 4, 4, 4, 6, 6],
     },
     { // 10
         image: 'nathan-3.png', // Boss 3
-        health: 200000,
+        health: 8_000_000,
         speed: 0.1,
         value: 40000,
         spawns: [7, 7, 7, 7, 7, 7, 7, 7, 9, 9],
     },
     { // 11
         image: 'nathan-4.png', // Boss 4
-        health: 2000000,
+        health: 16_000_000,
         speed: 0.1,
         value: 100000,
         spawns: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10], // because why not
     },
     { // 12
         image: '4.png',
-        health: 2000,
+        health: 60_000,
         speed: 0.5,
         value: 4000,
         spawns: [8, 8, 3, 3],
     },
     { // 13
         image: '5.png',
-        health: 4000,
+        health: 1_000_000,
         speed: 0.5,
         value: 10000,
         spawns: [12, 12, 12, 12],
@@ -166,6 +174,7 @@ const towers = [
     {
         name: 'Harvester',
         type: 'automation',
+        help: 'harvests resources (indicated by selected tile) and outputs at the arrow',
         cost: 100,
         resourceCost: [0, 0, 0, 0, 0, 0, 0, 0],
         costScale: 1.5,
@@ -189,6 +198,7 @@ const towers = [
     {
         name: 'Belt',
         type: 'automation',
+        help: 'resource transport',
         cost: 10,
         resourceCost: [0, 0, 0, 0, 0, 0, 0, 0],
         costScale: 1.05,
@@ -201,6 +211,7 @@ const towers = [
     {
         name: 'Generator',
         type: 'automation',
+        help: 'requires YELLOW resources to generate power',
         cost: 200,
         resourceCost: [0, 1, 2, 0, 0, 0, 0, 0],
         costScale: 2.0,
@@ -238,6 +249,7 @@ const towers = [
     {
         name: 'Power Pole',
         type: 'automation',
+        help: 'provides power to nearby cells',
         cost: 50,
         resourceCost: [0, 1, 0, 0, 0, 0, 0, 0],
         costScale: 1.7,
@@ -249,6 +261,7 @@ const towers = [
     {
         name: 'Tunnel',
         type: 'automation',
+        help: 'underground resource transportation',
         cost: 100,
         resourceCost: [0, 0, 1, 0, 0, 0, 0, 0],
         costScale: 1.2,
@@ -259,6 +272,7 @@ const towers = [
     {
         name: 'Splitter',
         type: 'automation',
+        help: 'the splitter splits resources (light arrow side) into up to 3 outputs (dark arrow sides)',
         cost: 100,
         resourceCost: [0, 0, 1, 0, 0, 0, 0, 0],
         costScale: 1.2,
@@ -270,6 +284,7 @@ const towers = [
     {
         name: 'Factory',
         type: 'automation',
+        help: 'takes resources for ammo production',
         cost: 2000,
         resourceCost: [0, 1, 1, 0, 0, 0, 0, 0],
         costScale: 1.5,
@@ -280,16 +295,18 @@ const towers = [
     {
         name: 'Combiner',
         type: 'automation',
+        help: 'resources color mixer\n\nred+blue=magenta\nblue+yellow=cyan\nyellow+red=green\nred+yellow+green=black\nblack+black=white',
         cost: 8000,
         resourceCost: [0, 10.4, 10, 0, 0, 0, 0, 0],
         costScale: 1.4,
-        resourceCostScale: 2.4,
+        resourceCostScale: 1.2,
         power: { draw: 10, gen: 0 },
         default: { xp: 0, dir: 0, inside: [], wait: -1 },
     },
     {
         name: 'Zapper',
         type: 'defense',
+        help: 'zaps nearby enemies',
         cost: 100,
         resourceCost: [1, 0.5, 0, 0, 0, 0, 0, 0],
         costScale: 1.3,
@@ -328,6 +345,7 @@ const towers = [
     {
         name: 'Magnet',
         type: 'defense',
+        help: 'slows nearby enemies',
         cost: 400,
         resourceCost: [1, 0.2, 0.4, 0, 0, 0, 0, 0],
         costScale: 1.2,
@@ -366,6 +384,7 @@ const towers = [
     {
         name: 'Turret',
         type: 'defense',
+        help: 'shoots nearby enemies, requires ammo',
         cost: 4000,
         resourceCost: [1.4, 1, 0, 0, 0, 0, 0, 0],
         costScale: 1.1,
@@ -404,6 +423,7 @@ const towers = [
     {
         name: 'Field',
         type: 'defense',
+        help: 'generates a field, requires resources',
         cost: 2000,
         resourceCost: [1.4, 0, 1, 0, 0, 0, 0, 0],
         costScale: 1.3,
@@ -434,6 +454,7 @@ const towers = [
     {
         name: 'Mint',
         type: 'special',
+        help: 'generates money over time',
         cost: 1000,
         resourceCost: [0, 0, 1, 0.02, 0, 0, 0, 0],
         costScale: 1.4,
@@ -454,7 +475,8 @@ const towers = [
     {
         name: 'Research',
         type: 'special',
-        cost: 10000,
+        help: 'elusive technical discoveries',
+        cost: 10_000,
         resourceCost: [0, 0, 0, 3, 3, 3, 0, 0],
         costScale: 4    ,
         resourceCostScale: 10,
@@ -490,8 +512,9 @@ const towers = [
     {
         name: 'Magic',
         type: 'defense',
-        cost: 100_000,
-        resourceCost: [0, 0, 0, 0, 0, 0, 10, 0.3],
+        help: 'crafted from rare resources',
+        cost: 1_000_000,
+        resourceCost: [0, 0, 0, 1, 1, 1, 10, 1],
         costScale: 1.7,
         resourceCostScale: 2.4,
         upgrades: [
@@ -528,6 +551,7 @@ const towers = [
     {
         name: 'End',
         type: 'special',
+        help: 'the end',
         cost: 1_000_000_000,
         resourceCost: [0, 0, 0, 0, 0, 0, 1000, 1000],
         costScale: 0,
@@ -678,6 +702,10 @@ function setup() {
 
     generateStocks();
     generateBlackjack();
+}
+
+function reset() {
+    Object.assign(game, JSON.parse(JSON.stringify(defaultGame)));
 }
 
 const corps = [ 'CHNC', 'DVNI', 'MILO' ];
@@ -1046,7 +1074,7 @@ function reset() {
 }
 
 function requiredXp(level) {
-    return level * level * 10;
+    return floor(level * level * 10 * pow(1.2, level));
 }
 
 function levelUpReward(level) {
@@ -1277,7 +1305,7 @@ function makeTower(x, y, id, data = {}) {
 
 const introductions = [
     0, // enemy 0 introduced at wave 0
-    5,
+    3,
     10,
     15,
     20,
@@ -1293,7 +1321,7 @@ const introductions = [
 ];
 
 const damping = [
-    5,
+    9,
     7,
     7,
     7,
@@ -2184,7 +2212,7 @@ function tick() {
             const ind = index(x, y);
             const cell = game.board[ind];
             if (cell && cell.type === 'tower' && cell.id === 3) {
-                let applicableNetworks = networks.filter(n => n.some(c => round(dist(x, y, c.x, c.y)) <= max(towers[c.cell.id].range.radius, towers[cell.id].range.radius)));
+                let applicableNetworks = networks.filter(n => n.some(c => round(dist(x, y, c.x, c.y)) <= max(towers[c.cell.id].range.radius, towers[cell.id].range.radius) + 1));
                 // if one network, add to it
                 if (applicableNetworks.length === 1) {
                     applicableNetworks[0].push({ x, y, cell });
@@ -2197,6 +2225,8 @@ function tick() {
             }
         }
     }
+
+    console.log(networks);
 
     // add power draws
     const networkPowers = networks.map(n => n.reduce((a, b) => (
@@ -2219,6 +2249,7 @@ function tick() {
             }
         }
     }
+
 
     const unpowered = networkPowers.map(n => n.draw > n.gen);
     for (let y = 0; y < BOARD_HEIGHT; y += 1) {
@@ -2533,7 +2564,7 @@ function tick() {
                             const toY = y + 0.5 + sin(dir) * range;
                             for (const enemy of activeEnemies) {
                                 if (distToLineSegment(enemy.x, enemy.y, fromX, fromY, toX, toY) <= 1.0) {
-                                    applyDamage(enemy, towers[cell.id].defense.damage * pow(2, cell.data.upgrades[0] / 2));
+                                    applyDamage(enemy, towers[cell.id].defense.damage * pow(2, cell.data.upgrades[0] / 2) * 0.5);
                                     enemy.effects['poison'] += 10 * pow(2, cell.data.upgrades[2]);
                                 }
                             }
@@ -3174,6 +3205,31 @@ function draw() {
             fill(255, 0, 0, 100);
             noStroke();
             rect(xOff, yOff, w, h);
+        }
+
+        if (mouseIsWithin(xOff, yOff, w, h)) {
+            stroke(0);
+            fill(255);
+            const help = tower.help;
+            textStyle(NORMAL);
+            const lines = help.split('\n').length;
+            const height = 15 + lines * 15;
+            const wid = textWidth(help.split('\n')[0]);
+            beginShape();
+            vertex(mouseX - 5, mouseY - 5);
+            vertex(mouseX, mouseY);
+            vertex(mouseX - 5, mouseY + 5);
+            vertex(mouseX - 5, mouseY + 5 + height);
+            vertex(mouseX - wid - 15, mouseY + 5 + height);
+            vertex(mouseX - wid - 15, mouseY - 5);
+            endShape(CLOSE);
+            fill(0);
+            noStroke();
+            textAlign(LEFT, TOP);
+            textStyle(BOLD);
+            text(tower.name, mouseX - wid - 10, mouseY);
+            textStyle(NORMAL);
+            text(help, mouseX - wid - 10, mouseY + 15);
         }
         
     }
